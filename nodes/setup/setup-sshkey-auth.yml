@@ -1,0 +1,27 @@
+---
+# Use this with -k flag, so ansible asks for the ssh password
+- name: Copy public ssh key to hosts
+  hosts: all
+  vars:
+    disable_password_auth: true
+  tasks:
+    - name: Set authorized keys taken from url
+      ansible.posix.authorized_key:
+        user: root
+        state: present
+        key: https://github.com/nikkischnelle.keys
+
+    - name: Create File for prohibit-password ssh setting
+      copy:
+        dest: /etc/ssh/sshd_config.d/90-disable_password_authentication.conf
+        content: |
+          PermitRootLogin prohibit-password
+      when: disable_password_auth
+      register: sshd_config
+
+    - name: Restart sshd
+      systemd:
+        name: sshd
+        state: restarted
+        enabled: true
+      when: sshd_config.changed 
